@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"exmaples.com/myapp/logging"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 )
@@ -28,6 +29,7 @@ var userCache = make(map[string]time.Time)
 var mu sync.Mutex // Mutex for thread-safe map access
 
 func main() {
+	logging.Log("INFO", "Application started")
 	router := mux.NewRouter()
 
 	// Load configuration from CSV file
@@ -49,6 +51,7 @@ func main() {
 		}
 
 		w.WriteHeader(http.StatusNotFound)
+		logging.Log("WARN", fmt.Sprintf("Config key '%s' not found", key))
 	}).Methods("GET")
 
 	// Route to handle user login
@@ -57,6 +60,7 @@ func main() {
 	// Route to handle restricted access
 	router.HandleFunc("/restricted", authMiddleware(accessRestrictedHandler)).Methods("GET")
 
+	logging.Log("INFO", "Server running on port 8000")
 	// Start server
 	fmt.Println("Server running on port 8000")
 	err = http.ListenAndServe(":8000", router)
@@ -67,6 +71,7 @@ func main() {
 
 // Function to load configuration from CSV file
 func loadConfig(filename string) ([]Configuration, error) {
+	logging.Log("INFO", fmt.Sprintf("Loading config from '%s'", filename))
 	log.Println(filename)
 	var config []Configuration
 
@@ -114,11 +119,13 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
+		logging.Log("ERROR", "Failed to decode login credentials")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	if !authenticate(creds.Username, creds.Password) {
+		logging.Log("WARN", fmt.Sprintf("Failed login attempt for user: %s", creds.Username))
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -131,6 +138,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
+		logging.Log("ERROR", "Failed to sign JWT token")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -145,6 +153,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  expirationTime,
 		HttpOnly: true,
 	})
+	logging.Log("INFO", fmt.Sprintf("User '%s' logged in successfully", creds.Username))
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -156,9 +165,11 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if err != nil {
 			if err == http.ErrNoCookie {
 				w.WriteHeader(http.StatusUnauthorized)
+				logging.Log("WARN", "No JWT cookie found")
 				return
 			}
 			w.WriteHeader(http.StatusBadRequest)
+			logging.Log("ERROR", "Failed to read JWT cookie")
 			return
 		}
 
@@ -172,14 +183,17 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if err != nil {
 			if err == jwt.ErrSignatureInvalid {
 				w.WriteHeader(http.StatusUnauthorized)
+				logging.Log("WARN", "Invalid JWT signature")
 				return
 			}
 			w.WriteHeader(http.StatusBadRequest)
+			logging.Log("ERROR", "Failed to parse JWT token")
 			return
 		}
 
 		if !token.Valid {
 			w.WriteHeader(http.StatusUnauthorized)
+			logging.Log("WARN", "JWT token is not valid")
 			return
 		}
 
@@ -189,6 +203,7 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		mu.Unlock()
 		if !ok {
 			w.WriteHeader(http.StatusUnauthorized)
+			logging.Log("WARN", fmt.Sprintf("User '%s' not found in cache", claims.Subject))
 			return
 		}
 
@@ -198,6 +213,7 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 // Handler for accessing restricted endpoint
 func accessRestrictedHandler(w http.ResponseWriter, r *http.Request) {
+	logging.Log("INFO", "Restricted endpoint accessed")
 	w.Write([]byte("Access restricted\n"))
 }
 
