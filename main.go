@@ -226,8 +226,13 @@ func accessRestrictedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	currentTime := time.Now().Format("2006-01-02 15:04:05")
+	responseContent := fmt.Sprintf("%s\n\nCurrent date and time: %s", string(fileContent), currentTime)
+
 	logging.Log("INFO", "Restricted endpoint accessed")
-	w.Write(fileContent)
+
+	w.Write([]byte(responseContent))
+	//w.Write(fileContent)
 }
 
 // Struct for credentials received from client
