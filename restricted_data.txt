@@ -1,0 +1,9 @@
+Restricted Data
+================
+- Confidential Information
+- User Private Data
+- Sensitive Financial Records
+- Proprietary Business Plans
+- Internal Company Policies
+
+Do not distribute without proper authorization.

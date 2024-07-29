@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -212,9 +213,21 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // Handler for accessing restricted endpoint
+//func accessRestrictedHandler(w http.ResponseWriter, r *http.Request) {
+//	logging.Log("INFO", "Restricted endpoint accessed")
+//	w.Write([]byte("Access restricted\n"))
+//}
+
 func accessRestrictedHandler(w http.ResponseWriter, r *http.Request) {
+	fileContent, err := ioutil.ReadFile("restricted_data.txt")
+	if err != nil {
+		logging.Log("ERROR", "Failed to read restricted data file: "+err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	logging.Log("INFO", "Restricted endpoint accessed")
-	w.Write([]byte("Access restricted\n"))
+	w.Write(fileContent)
 }
 
 // Struct for credentials received from client
