@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,11 +46,22 @@ func TestLoginHandler(t *testing.T) {
 			body:       `{}`,
 			wantStatus: http.StatusBadRequest,
 		},
+		{
+			name:       "Invalid JSON",
+			body:       `{"username":"admin","password"}`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "Empty body",
+			body:       ``,
+			wantStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("POST", "/login", bytes.NewBufferString(tt.body))
+			req.Header.Set("Content-Type", "application/json") // Set header to JSON
 			w := httptest.NewRecorder()
 			loginHandler(w, req)
 
@@ -70,6 +82,10 @@ func TestAuthMiddleware(t *testing.T) {
 	// Valid token generated with 'admin' user
 	validToken := generateTestToken("admin")
 
+	// Expired token test setup
+	expiredToken := generateTestToken("admin")
+	expiredToken = strings.Replace(expiredToken, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHBpcmF0aW9uVGltZSI6IjE2MjM5NTE5MjQiLCJzdWIiOiJhZG1pbiJ9.fW9bRV4K5U9xZ5CmlB_wDsC1A7o0TY4NCjJbUPKgPkk", "invalid-part", -1) // Simulate expiration
+
 	// Test cases for authMiddleware
 	tests := []struct {
 		name       string
@@ -87,8 +103,18 @@ func TestAuthMiddleware(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
+			name:       "Expired token",
+			token:      expiredToken,
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
 			name:       "No token",
 			token:      "",
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name:       "Valid token but wrong claim",
+			token:      generateTestToken("wrong-user"),
 			wantStatus: http.StatusUnauthorized,
 		},
 	}
