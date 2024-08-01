@@ -1,3 +1,4 @@
 go clean -cache -modcache -r
 go build -gcflags="all=-N -l"
 go install github.com/go-delve/delve/cmd/dlv@latest
+(dlv) break main.go:<line_number>
